@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QuizGuard Pro - Injeção Dinâmica JS</title>
+    <title>QuizGuard Pro - Correção Definitiva</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -11,7 +11,7 @@
 <body>
     <div class="app-container">
         <header class="top-nav">
-            <div class="logo"><i class="fa-solid fa-shield-cat"></i> <span>QuizGuard <span class="badge-pro">PRO JS</span></span></div>
+            <div class="logo"><i class="fa-solid fa-shield-cat"></i> <span>QuizGuard <span class="badge-pro">PRO FIX</span></span></div>
             <div class="nav-controls">
                 <button id="btnStudentView" class="nav-btn active"><i class="fa-solid fa-gamepad"></i> Modo Aluno</button>
                 <button id="btnTeacherView" class="nav-btn"><i class="fa-solid fa-user-astronaut"></i> Modo Professor</button>
@@ -29,7 +29,7 @@
                     <option value="webdev">🌐 Web Development (HTML/CSS/JS)</option>
                     <option value="sql">🗄️ Bases de Dados (SQL)</option>
                     <option value="networks">📡 Redes de Dados I</option>
-                    <optgroup label="Temas Salvos no Navegador" id="customThemesGroup"></optgroup>
+                    <optgroup label="Temas Salvos" id="customThemesGroup"></optgroup>
                 </select>
                 <input type="password" id="teacherPasswordInput" placeholder="Palavra-passe (admin)">
                 <div class="modal-actions" style="margin-top:20px;">
@@ -40,11 +40,11 @@
             </div>
         </div>
 
-        <!-- MODAL GESTÃO E CRIAÇÃO DE PERGUNTAS (JS) -->
+        <!-- MODAL GESTÃO DE PERGUNTAS (CORRIGIDO) -->
         <div id="qManagerModal" class="modal-backdrop hidden" style="align-items: flex-start; overflow-y: auto;">
             <div class="modal-card" style="max-width: 750px; margin-top: 30px; text-align: left;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                    <h2 style="color:var(--primary);"><i class="fa-solid fa-database"></i> Gerir Banco de Perguntas (JS)</h2>
+                    <h2 style="color:var(--primary);"><i class="fa-solid fa-database"></i> Gerir e Editar Perguntas</h2>
                     <button id="btnCloseQManager" class="btn secondary"><i class="fa-solid fa-xmark"></i> Fechar</button>
                 </div>
                 
@@ -128,7 +128,6 @@
                 <button id="btnStartTest" class="btn primary full-width" disabled>Entrar na Sala (F11)</button>
             </div>
 
-            <!-- O QUIZ É TOTALMENTE INJETADO AQUI VIA JS -->
             <div class="card quiz-card hidden" id="studentQuizCard">
                 <div class="quiz-header">
                     <div class="student-info-badge"><span id="displayStudentName">Nome</span></div>
@@ -137,7 +136,7 @@
                 <div class="progress-container"><div class="progress-bar" id="quizProgressBar"></div></div>
                 <div class="question-navigation-header"><h3 class="q-counter">Pergunta <span id="currentQNum">1</span> de <span id="totalQNum">30</span></h3></div>
                 
-                <div id="dynamicQuizContainer"></div> <!-- INJEÇÃO JS -->
+                <div id="dynamicQuizContainer"></div>
 
                 <div class="quiz-footer-actions">
                     <button id="btnPrevQ" class="btn secondary" disabled>Anterior</button>
@@ -165,7 +164,7 @@
                     <div class="info-box" style="margin-bottom:20px;">
                         <h3>Sala: <strong id="displayRoomCode">---</strong></h3>
                     </div>
-                    <button id="btnManageQuestions" class="btn secondary full-width" style="margin-bottom:15px;"><i class="fa-solid fa-database"></i> Gerir Perguntas (JS)</button>
+                    <button id="btnManageQuestions" class="btn secondary full-width" style="margin-bottom:15px;"><i class="fa-solid fa-database"></i> Gerir e Editar Perguntas</button>
                     <div class="form-group">
                         <label>Duração (minutos):</label>
                         <input type="number" id="settingDuration" value="30" min="1">

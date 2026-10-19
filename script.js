@@ -1,21 +1,20 @@
 (() => {
-    // 1. BANCOS DE PERGUNTAS NATIVOS EM JS (50 Perguntas cada)
+    // 1. BANCOS DE PERGUNTAS SÓLIDOS EM JS (50 Perguntas)
     const baseBanks = {
         webdev: Array.from({length: 50}, (_, i) => ({
-            id: i+1, text: `(Web) Pergunta ${i+1}: Qual a tecnologia ou tag correta para desenvolvimento web?`,
-            options: [`Opção Correta HTML/CSS ${i+1}`, "Tag errada 1", "Tag errada 2", "Tag errada 3"], correct: 0
+            id: i+1, text: `(Web) Pergunta ${i+1}: Qual a tag ou conceito correto em Desenvolvimento Web?`,
+            options: [`Opção Correta para Q${i+1}`, "Tag incorreta A", "Tag incorreta B", "Tag incorreta C"], correct: 0
         })),
         sql: Array.from({length: 50}, (_, i) => ({
-            id: i+1, text: `(SQL) Pergunta ${i+1}: Qual o comando SQL correto para gerir bases de dados?`,
-            options: [`SELECT / INSERT ${i+1}`, "DROP DATABASE", "ALTER INDEX", "CONNECT 0"], correct: 0
+            id: i+1, text: `(SQL) Pergunta ${i+1}: Qual o comando SQL correto para gerir dados?`,
+            options: [`SELECT / INSERT Q${i+1}`, "DROP INDEX", "ALTER SCHEMA", "DISCONNECT"], correct: 0
         })),
         networks: Array.from({length: 50}, (_, i) => ({
-            id: i+1, text: `(Redes) Pergunta ${i+1}: No modelo OSI, qual o protocolo ou camada aplicável?`,
-            options: [`Camada / Protocolo ${i+1}`, "Cabo Coaxial Simples", "Hub Passivo", "Repetidor Analógico"], correct: 0
+            id: i+1, text: `(Redes) Pergunta ${i+1}: No modelo OSI, qual o protocolo aplicável?`,
+            options: [`Protocolo / Camada Q${i+1}`, "Cabo Par Trançado", "Hub Simples", "Repetidor"], correct: 0
         }))
     };
 
-    // Perguntas reais iniciais de demonstração limpas
     baseBanks.webdev[0] = {id: 1, text: "O que significa HTML?", options: ["Hyper Text Markup Language", "Home Tool Markup Language", "Hyperlinks Text", "Hyper Tool"], correct: 0};
     baseBanks.webdev[1] = {id: 2, text: "Em CSS, qual propriedade altera a cor do texto?", options: ["text-color", "color", "font-color", "fgcolor"], correct: 1};
     baseBanks.webdev[2] = {id: 3, text: "Como se declara uma variável em JavaScript moderno?", options: ["variable x;", "let x;", "v x;", "str x;"], correct: 1};
@@ -41,10 +40,10 @@
     let roomCode = '', myId = '', isTeacher = false;
     let liveStudentsData = {}, submissionsData = [];
     
-    // ESTADOS ALUNO
     let myTestQuestions = [], studentAnswers = [], myInfractions = [];
     let currentQIndex = 0, timeRemainingSeconds = 0, timerInterval = null;
-    let currentState = 'A_AGUARDAR'; // 'A_AGUARDAR', 'EM_TESTE', 'BLOQUEADO', 'PAUSADO'
+    let currentState = 'A_AGUARDAR';
+    let downloadedBank = null; // Armazena as perguntas sacadas da sala pelo aluno
 
     client.on('connect', () => {
         document.getElementById('connStatus').innerHTML = '<i class="fa-solid fa-check"></i> Ligado com sucesso.';
@@ -60,7 +59,7 @@
         }
     });
 
-    // NAVEGAÇÃO DE PAINÉIS
+    // NAVEGAÇÃO
     document.getElementById('btnStudentView').addEventListener('click', () => {
         isTeacher = false; document.getElementById('studentView').classList.remove('hidden'); document.getElementById('teacherView').classList.add('hidden');
     });
@@ -80,7 +79,6 @@
             isTeacher = true; roomCode = code;
             document.getElementById('displayRoomCode').textContent = roomCode;
 
-            // Carrega o banco selecionado
             if(themeKey.startsWith("custom_")) {
                 let saved = JSON.parse(localStorage.getItem('qg_custom_banks')) || {};
                 activeQuestionsBank = saved[themeKey.replace("custom_", "")] || [];
@@ -88,6 +86,7 @@
                 activeQuestionsBank = JSON.parse(JSON.stringify(baseBanks[themeKey] || []));
             }
 
+            // Publica com retain para garantir que qualquer aluno que entre saiba as perguntas
             client.publish(`quizguard/${roomCode}/questions`, JSON.stringify(activeQuestionsBank), {retain: true});
             client.subscribe(`quizguard/${roomCode}/std/+`);
             client.subscribe(`quizguard/${roomCode}/sub/+`);
@@ -96,14 +95,16 @@
         }
     });
 
-    // 3. GESTÃO DE PERGUNTAS (PROFESSOR)
+    // 3. GESTÃO E EDIÇÃO DE PERGUNTAS (PROFESSOR CORRIGIDA)
     document.getElementById('btnManageQuestions').addEventListener('click', () => {
         document.getElementById('qManagerModal').classList.remove('hidden');
         renderQuestionsTable();
     });
     document.getElementById('btnCloseQManager').addEventListener('click', () => {
         document.getElementById('qManagerModal').classList.add('hidden');
+        // ATUALIZAÇÃO CRUCIAL: Publica imediatamente as alterações para a sala
         client.publish(`quizguard/${roomCode}/questions`, JSON.stringify(activeQuestionsBank), {retain: true});
+        alert("Alterações guardadas e sincronizadas com a sala!");
     });
 
     function renderQuestionsTable() {
@@ -165,12 +166,13 @@
     };
 
     // 4. MENSAGENS MQTT E COMANDOS
-    let downloadedBank = null;
     client.on('message', (topic, payload) => {
         const msg = payload.toString();
         const parts = topic.split('/');
 
-        if(parts[2] === 'questions' && !isTeacher) downloadedBank = JSON.parse(msg);
+        if(parts[2] === 'questions' && !isTeacher) {
+            downloadedBank = JSON.parse(msg);
+        }
 
         if(parts[2] === 'cmd' && parts[3] === myId && !isTeacher) {
             let cmd = JSON.parse(msg);
@@ -214,17 +216,23 @@
         }
     });
 
-    // 5. ENTRADA DO ALUNO E INJEÇÃO DE PERGUNTAS VIA JS
+    // 5. ENTRADA DO ALUNO CORRIGIDA (GARANTE O DOWNLOAD DAS PERGUNTAS)
     document.getElementById('btnStartTest').addEventListener('click', () => {
         roomCode = document.getElementById('studentRoomCode').value.trim();
         const name = document.getElementById('studentName').value.trim();
         if(!roomCode || !name) return alert("Insira a sala e o nome.");
 
+        // Subscreve ao tópico de perguntas da sala específica
         client.subscribe(`quizguard/${roomCode}/questions`);
-        document.getElementById('btnStartTest').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> A ligar...";
+        document.getElementById('btnStartTest').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> A ligar à sala...";
 
+        // Aguarda 1 segundo para receber a mensagem retain do MQTT com as perguntas
         setTimeout(() => {
-            if(!downloadedBank || downloadedBank.length === 0) return alert("A sala não tem perguntas carregadas pelo professor.");
+            if(!downloadedBank || downloadedBank.length === 0) {
+                alert("A sala não foi encontrada ou ainda não tem perguntas carregadas pelo professor.");
+                document.getElementById('btnStartTest').innerHTML = "Entrar na Sala (F11)";
+                return;
+            }
 
             let limit = downloadedBank.length >= 30 ? 30 : downloadedBank.length;
             myTestQuestions = downloadedBank.sort(() => 0.5 - Math.random()).slice(0, limit);
@@ -245,7 +253,7 @@
             
             injectQuestionJS(0);
             publishState();
-        }, 1500);
+        }, 1200);
     });
 
     function publishState() {
@@ -256,7 +264,7 @@
         }), {retain: true});
     }
 
-    // INJEÇÃO DINÂMICA VIA JAVASCRIPT DO QUIZ (100% Eficaz)
+    // INJEÇÃO JS DAS PERGUNTAS
     function injectQuestionJS(index) {
         currentQIndex = index;
         const q = myTestQuestions[index];
@@ -274,7 +282,6 @@
 
         document.getElementById('dynamicQuizContainer').innerHTML = html;
 
-        // Atribuir eventos aos radios injetados
         document.querySelectorAll('input[name="js_qopt"]').forEach(r => {
             r.addEventListener('change', (e) => {
                 document.querySelectorAll('.option-label').forEach(l => l.classList.remove('selected'));
@@ -309,7 +316,6 @@
         publishState();
     }
 
-    // NAVEGAÇÃO ENTRE PERGUNTAS
     document.getElementById('btnNextQ').addEventListener('click', () => {
         if(currentQIndex < myTestQuestions.length - 1) injectQuestionJS(currentQIndex + 1);
         publishState();
@@ -364,7 +370,7 @@
         try { document.exitFullscreen(); } catch(e){}
     }
 
-    // 6. PAINEL DE CONTROLO DO PROFESSOR (COM OS BOTÕES EXATOS)
+    // 6. PROFESSOR RADAR
     function renderTeacherRadar() {
         const tbody = document.getElementById('liveStudentsTable').querySelector('tbody');
         tbody.innerHTML = '';
@@ -384,16 +390,15 @@
                 tr.style.background = "rgba(239, 68, 68, 0.1)";
                 statusBadge = `<span class="live-badge" style="background:var(--danger)">${s.status}</span><br><small style="color:red;">${s.infractions.length ? s.infractions[s.infractions.length-1].reason : 'Congelado'}</small>`;
                 
-                // OS 3 MODOS REQUISITADOS
                 actions = `<div class="action-group">
-                    <button class="btn success btn-icon" title="Desbloquear normal" onclick="window.tCmd('${s.id}', 'unlock')"><i class="fa-solid fa-play"></i> Desbloquear</button>
-                    <button class="btn warning btn-icon" title="Desbloquear e retirar tempo" onclick="window.tCmd('${s.id}', 'unlock_time')"><i class="fa-solid fa-clock-rotate-left"></i> (- Tempo)</button>
-                    <button class="btn danger btn-icon" title="Expulsar aluno" onclick="window.tCmd('${s.id}', 'kick')"><i class="fa-solid fa-door-open"></i> Expulsar</button>
+                    <button class="btn success btn-icon" title="Desbloquear" onclick="window.tCmd('${s.id}', 'unlock')"><i class="fa-solid fa-play"></i> Desbloquear</button>
+                    <button class="btn warning btn-icon" title="Desbloquear tirando tempo" onclick="window.tCmd('${s.id}', 'unlock_time')"><i class="fa-solid fa-clock-rotate-left"></i> (- Tempo)</button>
+                    <button class="btn danger btn-icon" title="Expulsar" onclick="window.tCmd('${s.id}', 'kick')"><i class="fa-solid fa-door-open"></i> Expulsar</button>
                 </div>`;
             } else {
                 statusBadge = `<span class="live-badge">A Fazer Teste</span>`;
                 actions = `<div class="action-group">
-                    <button class="btn warning btn-icon" title="Congelar/Pausar Ecrã" onclick="window.tCmd('${s.id}', 'force_pause')"><i class="fa-solid fa-hand"></i> Pausar</button>
+                    <button class="btn warning btn-icon" title="Pausar Ecrã" onclick="window.tCmd('${s.id}', 'force_pause')"><i class="fa-solid fa-hand"></i> Pausar</button>
                     <button class="btn danger btn-icon" title="Expulsar" onclick="window.tCmd('${s.id}', 'kick')"><i class="fa-solid fa-door-open"></i> Expulsar</button>
                 </div>`;
             }
