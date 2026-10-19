@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QuizGuard Pro - Anti-Cheat System</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Biblioteca MQTT para comunicação em Tempo Real entre PC e Telemóvel -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navegação Principal -->
+        <header class="top-nav">
+            <div class="logo">
+                <i class="fa-solid fa-shield-cat"></i> <span>QuizGuard <span class="badge-pro">PRO</span></span>
+            </div>
+            <div class="nav-controls">
+                <button id="btnStudentView" class="nav-btn active"><i class="fa-solid fa-gamepad"></i> Modo Aluno</button>
+                <button id="btnTeacherView" class="nav-btn"><i class="fa-solid fa-user-astronaut"></i> Modo Professor</button>
+            </div>
+        </header>
+
+        <!-- Modais de Segurança e Autenticação -->
+        <div id="teacherAuthModal" class="modal-backdrop hidden">
+            <div class="modal-card">
+                <div class="icon-glow"><i class="fa-solid fa-tower-broadcast"></i></div>
+                <h3>Criar Sala / Acesso Professor</h3>
+                <p>Introduza o Código para criar a sala e a sua senha:</p>
+                <input type="text" id="teacherRoomInput" placeholder="Código da Sala (Ex: 1234)">
+                <input type="password" id="teacherPasswordInput" placeholder="Palavra-passe (prof123)">
+                <div class="modal-actions">
+                    <button id="btnCancelAuth" class="btn secondary">Cancelar</button>
+                    <button id="btnSubmitAuth" class="btn primary">Abrir Sala</button>
+                </div>
+                <span id="authError" class="error-text hidden">Acesso Negado!</span>
+            </div>
+        </div>
+
+        <div id="studentLockModal" class="modal-backdrop hidden">
+            <div class="modal-card alert-card">
+                <div class="alert-icon pulse"><i class="fa-solid fa-ban"></i></div>
+                <h2>TESTE BLOQUEADO</h2>
+                <p>Foi detetada uma quebra nas regras de segurança.</p>
+                <p class="highlight-warn" id="lockReasonText">Motivo: Mudança de Aba / Foco</p>
+                <p class="waiting-text"><i class="fa-solid fa-rotate fa-spin"></i> O ecrã está bloqueado. Aguarde desbloqueio do professor.</p>
+            </div>
+        </div>
+
+        <!-- ECRÃ DO ALUNO -->
+        <main id="studentView" class="view-section">
+            <div class="card registration-card" id="studentRegCard">
+                <div class="card-header-vibrant">
+                    <h2>Entrar na Sala Segura</h2>
+                    <p id="connStatus" style="color:var(--warning); font-weight:bold; font-size:0.8rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> A ligar ao servidor global...</p>
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-key"></i> Código da Sala (Dado pelo Professor):</label>
+                    <input type="text" id="studentRoomCode" placeholder="Ex: 1234">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa-solid fa-user"></i> Nome Completo:</label>
+                    <input type="text" id="studentName" placeholder="Ex: João Miguel Silva">
+                </div>
+                <button id="btnStartTest" class="btn primary full-width" disabled><i class="fa-solid fa-rocket"></i> Iniciar Teste (F11)</button>
+            </div>
+
+            <div class="card quiz-card hidden" id="studentQuizCard">
+                <div class="quiz-header">
+                    <div class="student-info-badge">
+                        <i class="fa-solid fa-user-check"></i>
+                        <span id="displayStudentName">Nome</span>
+                    </div>
+                    <div class="timer-box">
+                        <i class="fa-solid fa-stopwatch"></i> <span id="timeLeft">00:00</span>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" id="quizProgressBar"></div>
+                </div>
+
+                <div class="question-navigation-header">
+                    <h3 class="q-counter">Pergunta <span id="currentQNum">1</span> de <span id="totalQNum">30</span></h3>
+                </div>
+
+                <div id="singleQuestionContainer" class="single-question-container">
+                    <!-- Pergunta Injetada Aqui -->
+                </div>
+
+                <div class="quiz-footer-actions">
+                    <button id="btnPrevQ" class="btn secondary" disabled><i class="fa-solid fa-arrow-left"></i> Anterior</button>
+                    <button id="btnNextQ" class="btn primary">Próxima <i class="fa-solid fa-arrow-right"></i></button>
+                    <button id="btnSubmitTest" class="btn success hidden"><i class="fa-solid fa-check-double"></i> Finalizar Teste</button>
+                </div>
+            </div>
+
+            <div class="card result-card hidden" id="studentResultCard">
+                <div class="success-icon"><i class="fa-solid fa-trophy"></i></div>
+                <h2>Teste Terminado!</h2>
+                <p>Pode agora sair do ecrã inteiro em segurança.</p>
+                <div class="score-display">
+                    <span>Nota Final (0 a 20):</span>
+                    <h1 id="finalScoreVal">--</h1>
+                    <p class="score-details" id="scoreDetailsText"></p>
+                </div>
+            </div>
+        </main>
+
+        <!-- ECRÃ DO PROFESSOR -->
+        <main id="teacherView" class="view-section hidden">
+            <div class="dashboard-grid">
+                <div class="card settings-panel">
+                    <h2><i class="fa-solid fa-gears"></i> Definições da Sala</h2>
+                    <div class="info-box" style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom:5px; color:var(--primary);"><i class="fa-solid fa-door-open"></i> Sala Atual: <strong id="displayRoomCode">---</strong></h3>
+                        <p style="font-size:0.85rem;">Dê este código aos seus alunos para eles entrarem no teste.</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Duração (minutos):</label>
+                        <input type="number" id="settingDuration" value="30" min="1">
+                    </div>
+                    <div class="info-box mt-4">
+                        <h4><i class="fa-solid fa-circle-info"></i> Sistema de Notas</h4>
+                        <p>30 Perguntas total. Cotadas de 0 a 20 valores.</p>
+                        <p>Respostas erradas descontam 1/4 do valor da pergunta. Em branco não desconta.</p>
+                    </div>
+                </div>
+
+                <div class="card monitor-panel">
+                    <div class="card-header-flex">
+                        <h2><i class="fa-solid fa-satellite-dish"></i> Radar de Alunos</h2>
+                        <span class="live-badge pulse-bg">Ligado ao Servidor</span>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table" id="liveStudentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Aluno</th>
+                                    <th>Progresso</th>
+                                    <th>Estado Atual</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="empty-row" id="noStudentsRow"><td colspan="4">A aguardar alunos na sala...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="margin-top: 2rem;"><i class="fa-solid fa-file-signature"></i> Pautas (Submissões)</h3>
+                    <div class="table-responsive">
+                        <table class="data-table" id="submissionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Nota (0-20)</th>
+                                    <th>Infrações Totais</th>
+                                    <th>Ver Infrações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="empty-row" id="noSubsRow"><td colspan="4">Sem submissões ainda.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
