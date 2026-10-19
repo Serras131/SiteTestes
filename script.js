@@ -7,10 +7,9 @@
                 id: i+1,
                 text: `${topic} nº ${i+1}: Qual é a resposta correta para esta questão avançada?`,
                 options: optionsArray,
-                correct: Math.floor(Math.random() * 4) // Aleatório entre 0 e 3 para a demo
+                correct: Math.floor(Math.random() * 4) 
             });
         }
-        // Substituir as primeiras 5 de cada por reais para ver a diferença
         if(topic.includes("Web")) {
             qs[0] = {id: 1, text: "O que significa HTML?", options: ["Hyper Text Markup Language", "Home Tool Markup Language", "Hyperlinks and Text", "Hyper Tool Language"], correct: 0};
             qs[1] = {id: 2, text: "Em CSS, como se muda a cor do texto?", options: ["text-color", "color", "font-color", "bgcolor"], correct: 1};
@@ -45,7 +44,7 @@
             customThemesGroup.appendChild(opt);
         }
     }
-    loadCustomThemes(); // Carrega temas logo ao iniciar
+    loadCustomThemes(); 
 
     let currentSessionBank = [];
 
@@ -84,7 +83,7 @@
         const selectedTheme = document.getElementById('teacherBankSelect').value;
 
         if(!code) return alert("Insira um código de sala!");
-        if(pass === 'prof123') {
+        if(pass === 'admin') { 
             document.getElementById('teacherAuthModal').classList.add('hidden');
             document.getElementById('teacherView').classList.remove('hidden');
             document.getElementById('studentView').classList.add('hidden');
@@ -94,7 +93,6 @@
             isTeacher = true; roomCode = code;
             document.getElementById('displayRoomCode').textContent = roomCode;
             
-            // Carregar o banco escolhido
             if(selectedTheme.startsWith("custom_")) {
                 let savedBanks = JSON.parse(localStorage.getItem('qg_custom_banks')) || {};
                 let tName = selectedTheme.replace("custom_", "");
@@ -103,7 +101,6 @@
                 currentSessionBank = banks[selectedTheme];
             }
             
-            // Enviar banco para a Sala
             client.publish(`quizguard/${roomCode}/questions`, JSON.stringify(currentSessionBank), {retain: true});
             client.subscribe(`quizguard/${roomCode}/std/+`);
             client.subscribe(`quizguard/${roomCode}/sub/+`);
@@ -156,17 +153,14 @@
         document.querySelectorAll('#qManagerModal input[type="text"], #qManagerModal input[type="hidden"]').forEach(el => el.value = '');
     });
 
-    // GUARDAR TEMA NO LOCALSTORAGE PARA FUTURO
     document.getElementById('btnSaveCustomBank').addEventListener('click', () => {
         let themeName = prompt("Qual o nome deste Tema para o guardar?");
         if(!themeName || themeName.trim() === "") return;
-        
         let savedBanks = JSON.parse(localStorage.getItem('qg_custom_banks')) || {};
         savedBanks[themeName] = [...currentSessionBank];
         localStorage.setItem('qg_custom_banks', JSON.stringify(savedBanks));
-        
         alert("Tema guardado com sucesso! Estará disponível no menu ao criar novas salas.");
-        loadCustomThemes(); // Atualiza a dropdown do inicio
+        loadCustomThemes(); 
     });
 
     window.editQ = (id) => {
@@ -189,15 +183,36 @@
         if(parts[2] === 'questions' && !isTeacher) downloadedBank = JSON.parse(msgStr);
         if(parts[2] === 'cmd' && parts[3] === myId && !isTeacher) {
             const cmd = JSON.parse(msgStr);
-            if(cmd.action === 'unlock') {
+            if(cmd.action === 'start_test') { 
+                document.getElementById('studentWaitModal').classList.add('hidden');
+                isTestBlocked = false; 
+                publishStudentState('EM_TESTE'); 
+                startTimer();
+                setTimeout(() => { focusCheckActive = true; }, 1500); 
+            } else if(cmd.action === 'unlock') {
                 isTestBlocked = false; document.getElementById('studentLockModal').classList.add('hidden');
                 publishStudentState(); try { document.documentElement.requestFullscreen(); } catch(e){}
             } else if(cmd.action === 'unlock_time') {
                 isTestBlocked = false; document.getElementById('studentLockModal').classList.add('hidden');
-                timeRemainingSeconds -= cmd.amount; // Tira o tempo escolhido pelo professor
+                timeRemainingSeconds -= cmd.amount; 
                 publishStudentState(); try { document.documentElement.requestFullscreen(); } catch(e){}
+            } else if(cmd.action === 'force_pause') {
+                // Nova ação: Pausa manual pelo professor
+                isTestBlocked = true;
+                publishStudentState('BLOQUEADO');
+                document.getElementById('lockReasonText').textContent = "Pausado pelo Professor para Verificação";
+                document.getElementById('studentLockModal').classList.remove('hidden');
             } else if(cmd.action === 'terminate') {
                 finalizeTest("Submetido Forçadamente pelo Professor devido a Quebra de Regras");
+            } else if(cmd.action === 'kick') { 
+                focusCheckActive = false;
+                clearInterval(timerInterval);
+                document.getElementById('studentQuizCard').classList.add('hidden');
+                document.getElementById('studentLockModal').classList.add('hidden');
+                document.getElementById('studentWaitModal').classList.add('hidden');
+                document.getElementById('studentKickedModal').classList.remove('hidden');
+                try { document.exitFullscreen(); } catch(e){}
+                client.publish(`quizguard/${roomCode}/std/${myId}`, '', { retain: true }); 
             }
         }
         if(parts[2] === 'std' && isTeacher) {
@@ -207,7 +222,7 @@
         if(parts[2] === 'sub' && isTeacher) { submissionsData.push(JSON.parse(msgStr)); renderTeacherSubsTable(); }
     });
 
-    // 7. INICIAR TESTE ALUNO E EMBARALHAR
+    // 7. INICIAR SALA DE ESPERA DO ALUNO
     let timeRemainingSeconds = 0, timerInterval = null, focusCheckActive = false, isTestBlocked = false, currentQIndex = 0, studentAnswers = [], myInfractions = [];
 
     document.getElementById('btnStartTest').addEventListener('click', async () => {
@@ -216,16 +231,15 @@
         if(!roomCode || !name) return alert('Preencha a Sala e o Nome.');
 
         client.subscribe(`quizguard/${roomCode}/questions`);
-        document.getElementById('btnStartTest').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> A sincronizar perguntas...";
+        document.getElementById('btnStartTest').innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> A entrar...";
         
         setTimeout(async () => {
             if(!downloadedBank || downloadedBank.length === 0) {
-                alert("A sala não tem perguntas. O professor ainda não preparou a sala.");
-                document.getElementById('btnStartTest').innerHTML = "<i class='fa-solid fa-rocket'></i> Iniciar Teste (F11)";
+                alert("A sala não existe ou o professor ainda não preparou as perguntas.");
+                document.getElementById('btnStartTest').innerHTML = "<i class='fa-solid fa-rocket'></i> Entrar na Sala (F11)";
                 return;
             }
 
-            // AVALIAÇÃO: Sorteia as perguntas (Se tiver 50, sorteia 30. Se tiver menos, usa todas)
             let maxPerguntas = downloadedBank.length >= 30 ? 30 : downloadedBank.length;
             myTestQuestions = downloadedBank.sort(() => 0.5 - Math.random()).slice(0, maxPerguntas);
             studentAnswers = new Array(maxPerguntas).fill(null);
@@ -241,8 +255,10 @@
             document.getElementById('studentRegCard').classList.add('hidden');
             document.getElementById('studentQuizCard').classList.remove('hidden');
             
-            publishStudentState('EM_TESTE'); loadQuestion(0); startTimer();
-            setTimeout(() => { focusCheckActive = true; }, 1500);
+            isTestBlocked = true;
+            document.getElementById('studentWaitModal').classList.remove('hidden');
+            publishStudentState('A_AGUARDAR'); 
+            loadQuestion(0);
 
         }, 1500);
     });
@@ -328,6 +344,7 @@
         
         try { document.exitFullscreen(); } catch(e){}
         document.getElementById('studentQuizCard').classList.add('hidden'); document.getElementById('studentLockModal').classList.add('hidden');
+        document.getElementById('studentWaitModal').classList.add('hidden');
         document.getElementById('studentResultCard').classList.remove('hidden');
         document.getElementById('finalScoreVal').textContent = `${finalScore}`;
         document.getElementById('scoreDetailsText').textContent = `${correct} Certas | ${wrong} Erradas | ${blank} Branco`;
@@ -341,22 +358,54 @@
         if(students.length === 0) { tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Nenhum aluno ativo.</td></tr>`; return; }
 
         students.forEach(s => {
-            const isBlocked = s.status === 'BLOQUEADO'; const tr = document.createElement('tr');
+            const isBlocked = s.status === 'BLOQUEADO'; 
+            const isWaiting = s.status === 'A_AGUARDAR';
+            const tr = document.createElement('tr');
+            
             if (isBlocked) tr.className = 'blocked-row';
+            else if (isWaiting) tr.className = 'waiting-row';
+            
+            let statusHTML = `<span class="live-badge">Tudo Ok</span>`;
+            if (isBlocked) statusHTML = `<span class="live-badge" style="background:var(--danger)">Bloqueado (${s.infractions.length}x)</span><br><small style="color:var(--danger); font-weight:bold;">${s.infractions[s.infractions.length-1].reason}</small>`;
+            if (isWaiting) statusHTML = `<span class="live-badge" style="background:var(--info)">Na Sala de Espera</span>`;
+
+            let actionsHTML = `-`;
+            if (isWaiting) {
+                actionsHTML = `<button class="btn info btn-icon" title="Autorizar Inicio" onclick="window.teacherAction('${s.id}', 'start_test')"><i class="fa-solid fa-play"></i> Autorizar</button>
+                               <button class="btn danger btn-icon" title="Expulsar" onclick="window.teacherAction('${s.id}', 'kick')"><i class="fa-solid fa-door-open"></i> Expulsar</button>`;
+            } else if (isBlocked) {
+                actionsHTML = `
+                    <div class="action-group">
+                        <button class="btn success btn-icon" title="Libertar Normal" onclick="window.teacherAction('${s.id}', 'unlock')"><i class="fa-solid fa-play"></i></button>
+                        <button class="btn warning btn-icon" title="Libertar e Retirar Tempo" onclick="window.teacherAction('${s.id}', 'unlock_time')"><i class="fa-solid fa-clock-rotate-left"></i> Tempo</button>
+                        <button class="btn danger btn-icon" title="Terminar Teste Agora" onclick="window.teacherAction('${s.id}', 'terminate')"><i class="fa-solid fa-skull"></i> Terminar</button>
+                    </div>`;
+            } else {
+                // ALUNO NORMAL (Sem infrações): Botão para Pausar manualmente ou Expulsar
+                actionsHTML = `
+                    <div class="action-group">
+                        <button class="btn warning btn-icon" title="Pausar Teste para Investigação" onclick="window.teacherAction('${s.id}', 'force_pause')"><i class="fa-solid fa-hand"></i> Pausar</button>
+                        <button class="btn danger btn-icon" title="Expulsar (Sem Submeter)" onclick="window.teacherAction('${s.id}', 'kick')"><i class="fa-solid fa-door-open"></i> Expulsar</button>
+                    </div>`;
+            }
+
             tr.innerHTML = `
                 <td><strong>${s.name}</strong></td>
                 <td><div style="font-weight:bold; color:var(--primary);">P. ${s.currentQ} / 30</div></td>
-                <td>${isBlocked ? `<span class="live-badge" style="background:var(--danger)">Bloqueado (${s.infractions.length}x)</span><br><small style="color:var(--danger); font-weight:bold;">${s.infractions[s.infractions.length-1].reason}</small>` : `<span class="live-badge">Ok</span>`}</td>
-                <td>${isBlocked ? `
-                        <div class="action-group">
-                            <button class="btn success btn-icon" title="Libertar Normal" onclick="window.teacherAction('${s.id}', 'unlock')"><i class="fa-solid fa-play"></i></button>
-                            <button class="btn warning btn-icon" title="Libertar e Retirar Tempo" onclick="window.teacherAction('${s.id}', 'unlock_time')"><i class="fa-solid fa-clock-rotate-left"></i> Tempo</button>
-                            <button class="btn danger btn-icon" title="Terminar Teste Agora" onclick="window.teacherAction('${s.id}', 'terminate')"><i class="fa-solid fa-skull"></i> Terminar</button>
-                        </div>` : '-'}
-                </td>`;
+                <td>${statusHTML}</td>
+                <td><div class="action-group">${actionsHTML}</div></td>`;
             tbody.appendChild(tr);
         });
     }
+
+    // AÇÃO GLOBAL: INICIAR TODOS OS QUE ESTÃO A AGUARDAR
+    document.getElementById('btnStartAllWaiting').addEventListener('click', () => {
+        Object.values(liveStudentsData).forEach(s => {
+            if (s.status === 'A_AGUARDAR') {
+                client.publish(`quizguard/${roomCode}/cmd/${s.id}`, JSON.stringify({ action: 'start_test' }));
+            }
+        });
+    });
 
     function renderTeacherSubsTable() {
         const tbody = document.getElementById('submissionsTable').querySelector('tbody');
@@ -376,18 +425,27 @@
     window.teacherAction = (studentId, actionType) => {
         let payload;
         if(actionType === 'terminate') {
-            if(!confirm("Isto vai fechar o teste do aluno instantaneamente e submeter a nota provisória. Tem a certeza?")) return;
+            if(!confirm("Isto vai fechar o teste e submeter a nota. Tem a certeza?")) return;
             payload = { action: 'terminate' };
+        } else if(actionType === 'kick') {
+            if(!confirm("Tem a certeza que deseja expulsar o aluno sem submeter qualquer nota?")) return;
+            payload = { action: 'kick' };
         } else if(actionType === 'unlock_time') {
             let mins = prompt("Quantos MINUTOS deseja retirar ao aluno devido à infração?");
-            if(mins === null || mins.trim() === "" || isNaN(mins)) return; // Cancelou ou meteu letras
+            if(mins === null || mins.trim() === "" || isNaN(mins)) return; 
             payload = { action: 'unlock_time', amount: parseInt(mins) * 60 };
+        } else if(actionType === 'force_pause') {
+            payload = { action: 'force_pause' };
         } else {
-            payload = { action: 'unlock' };
+            payload = { action: actionType };
         }
 
         client.publish(`quizguard/${roomCode}/cmd/${studentId}`, JSON.stringify(payload));
-        if(liveStudentsData[studentId] && actionType !== 'terminate') { liveStudentsData[studentId].status = 'EM_TESTE'; renderTeacherLiveTable(); }
+        
+        // Remove estado provisório na tabela
+        if(liveStudentsData[studentId] && ['unlock','unlock_time','start_test'].includes(actionType)) { 
+            liveStudentsData[studentId].status = 'EM_TESTE'; renderTeacherLiveTable(); 
+        }
     };
 
     window.viewInfractions = (studentId) => {

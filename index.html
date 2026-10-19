@@ -21,7 +21,7 @@
             </div>
         </header>
 
-        <!-- MODAL AUTENTICAÇÃO PROFESSOR (COM ESCOLHA DE TEMA) -->
+        <!-- MODAL AUTENTICAÇÃO PROFESSOR -->
         <div id="teacherAuthModal" class="modal-backdrop hidden">
             <div class="modal-card">
                 <div class="icon-glow"><i class="fa-solid fa-tower-broadcast"></i></div>
@@ -29,7 +29,7 @@
                 
                 <input type="text" id="teacherRoomInput" placeholder="Código da Sala (Ex: 1234)" style="margin-bottom:10px;">
                 
-                <label style="display:block; text-align:left; font-weight:bold; font-size:0.9rem; margin-bottom:5px; color:var(--text-main);">Escolha o Tema (Sorteia 30 de 50 perguntas):</label>
+                <label style="display:block; text-align:left; font-weight:bold; font-size:0.9rem; margin-bottom:5px; color:var(--text-main);">Escolha o Tema (Sorteia 30 de 50):</label>
                 <select id="teacherBankSelect" class="form-select" style="width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:2px solid var(--border-color); font-family:inherit;">
                     <option value="webdev">🌐 Web Development (HTML/CSS/JS)</option>
                     <option value="sql">🗄️ Bases de Dados (SQL)</option>
@@ -38,7 +38,7 @@
                     <optgroup label="Os Meus Temas Guardados" id="customThemesGroup"></optgroup>
                 </select>
 
-                <input type="password" id="teacherPasswordInput" placeholder="Palavra-passe (prof123)">
+                <input type="password" id="teacherPasswordInput" placeholder="Palavra-passe (admin)">
                 
                 <div class="modal-actions" style="margin-top:20px;">
                     <button id="btnCancelAuth" class="btn secondary">Cancelar</button>
@@ -85,14 +85,32 @@
             </div>
         </div>
 
-        <!-- MODAL BLOQUEIO DE ALUNO -->
+        <!-- MODAIS DO ALUNO -->
+        <div id="studentWaitModal" class="modal-backdrop hidden">
+            <div class="modal-card info-card">
+                <div class="alert-icon pulse" style="color:var(--accent)"><i class="fa-solid fa-hourglass-half"></i></div>
+                <h2>SALA DE ESPERA</h2>
+                <p>O seu ecrã está fixo. Aguarde que o professor inicie o seu teste.</p>
+                <p class="waiting-text"><i class="fa-solid fa-circle-notch fa-spin"></i> A aguardar autorização do professor...</p>
+            </div>
+        </div>
+
         <div id="studentLockModal" class="modal-backdrop hidden">
             <div class="modal-card alert-card">
                 <div class="alert-icon pulse"><i class="fa-solid fa-ban"></i></div>
                 <h2>TESTE BLOQUEADO</h2>
-                <p>Foi detetada uma quebra nas regras de segurança.</p>
+                <p>Atenção à segurança da avaliação.</p>
                 <p class="highlight-warn" id="lockReasonText">Motivo: -</p>
-                <p class="waiting-text"><i class="fa-solid fa-rotate fa-spin"></i> A aguardar decisão do professor.</p>
+                <p class="waiting-text"><i class="fa-solid fa-rotate fa-spin"></i> O tempo parou. A aguardar professor.</p>
+            </div>
+        </div>
+
+        <div id="studentKickedModal" class="modal-backdrop hidden">
+            <div class="modal-card alert-card">
+                <div class="alert-icon"><i class="fa-solid fa-door-closed"></i></div>
+                <h2>FOI EXPULSO</h2>
+                <p>O professor expulsou-o da sala de avaliação.</p>
+                <p class="highlight-warn">O seu acesso foi revogado.</p>
             </div>
         </div>
 
@@ -111,7 +129,7 @@
                     <label><i class="fa-solid fa-user"></i> Nome Completo:</label>
                     <input type="text" id="studentName" placeholder="Ex: João Miguel Silva">
                 </div>
-                <button id="btnStartTest" class="btn primary full-width" disabled><i class="fa-solid fa-rocket"></i> Iniciar Teste (F11)</button>
+                <button id="btnStartTest" class="btn primary full-width" disabled><i class="fa-solid fa-rocket"></i> Entrar na Sala (F11)</button>
             </div>
 
             <div class="card quiz-card hidden" id="studentQuizCard">
@@ -159,14 +177,18 @@
                 </div>
 
                 <div class="card monitor-panel">
-                    <div class="card-header-flex">
-                        <h2><i class="fa-solid fa-satellite-dish"></i> Radar de Alunos</h2>
-                        <span class="live-badge pulse-bg">Ligado</span>
+                    <div class="card-header-flex" style="flex-wrap: wrap; gap: 10px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <h2><i class="fa-solid fa-satellite-dish"></i> Radar de Alunos</h2>
+                            <span class="live-badge pulse-bg">Ligado</span>
+                        </div>
+                        <button id="btnStartAllWaiting" class="btn success"><i class="fa-solid fa-rocket"></i> Autorizar Todos</button>
                     </div>
+                    
                     <div class="table-responsive">
                         <table class="data-table" id="liveStudentsTable">
                             <thead>
-                                <tr><th>Aluno</th><th>Progresso</th><th>Última Infração</th><th>Ações (Desbloqueio / Fim)</th></tr>
+                                <tr><th>Aluno</th><th>Estado/Progresso</th><th>Última Infração</th><th>Ações</th></tr>
                             </thead>
                             <tbody><tr class="empty-row"><td colspan="4">A aguardar alunos...</td></tr></tbody>
                         </table>
