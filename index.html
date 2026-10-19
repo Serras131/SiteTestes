@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QuizGuard Pro - Anti-Cheat System</title>
+    <title>QuizGuard Pro - Injeção Dinâmica JS</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <!-- NAVEGAÇÃO -->
         <header class="top-nav">
-            <div class="logo">
-                <i class="fa-solid fa-shield-cat"></i> <span>QuizGuard <span class="badge-pro">PRO</span></span>
-            </div>
+            <div class="logo"><i class="fa-solid fa-shield-cat"></i> <span>QuizGuard <span class="badge-pro">PRO JS</span></span></div>
             <div class="nav-controls">
                 <button id="btnStudentView" class="nav-btn active"><i class="fa-solid fa-gamepad"></i> Modo Aluno</button>
                 <button id="btnTeacherView" class="nav-btn"><i class="fa-solid fa-user-astronaut"></i> Modo Professor</button>
@@ -26,20 +23,15 @@
             <div class="modal-card">
                 <div class="icon-glow"><i class="fa-solid fa-tower-broadcast"></i></div>
                 <h3>Criar Sala Segura</h3>
-                
                 <input type="text" id="teacherRoomInput" placeholder="Código da Sala (Ex: 1234)" style="margin-bottom:10px;">
-                
-                <label style="display:block; text-align:left; font-weight:bold; font-size:0.9rem; margin-bottom:5px; color:var(--text-main);">Escolha o Tema (Sorteia 30 de 50):</label>
-                <select id="teacherBankSelect" class="form-select" style="width:100%; padding:12px; margin-bottom:10px; border-radius:10px; border:2px solid var(--border-color); font-family:inherit;">
+                <label style="display:block; text-align:left; font-weight:bold; font-size:0.9rem; margin-bottom:5px;">Tema Base (Sorteia 30 de 50):</label>
+                <select id="teacherBankSelect" class="form-select" style="width:100%; padding:12px; margin-bottom:10px; border-radius:10px;">
                     <option value="webdev">🌐 Web Development (HTML/CSS/JS)</option>
                     <option value="sql">🗄️ Bases de Dados (SQL)</option>
                     <option value="networks">📡 Redes de Dados I</option>
-                    <option value="empty">📝 Criar Novo do Zero (Vazio)</option>
-                    <optgroup label="Os Meus Temas Guardados" id="customThemesGroup"></optgroup>
+                    <optgroup label="Temas Salvos no Navegador" id="customThemesGroup"></optgroup>
                 </select>
-
                 <input type="password" id="teacherPasswordInput" placeholder="Palavra-passe (admin)">
-                
                 <div class="modal-actions" style="margin-top:20px;">
                     <button id="btnCancelAuth" class="btn secondary">Cancelar</button>
                     <button id="btnSubmitAuth" class="btn primary">Abrir Sala</button>
@@ -48,35 +40,42 @@
             </div>
         </div>
 
-        <!-- MODAL GESTÃO DE PERGUNTAS -->
+        <!-- MODAL GESTÃO E CRIAÇÃO DE PERGUNTAS (JS) -->
         <div id="qManagerModal" class="modal-backdrop hidden" style="align-items: flex-start; overflow-y: auto;">
-            <div class="modal-card" style="max-width: 700px; margin-top: 50px;">
+            <div class="modal-card" style="max-width: 750px; margin-top: 30px; text-align: left;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                    <h2 style="color:var(--primary);"><i class="fa-solid fa-database"></i> Banco de Perguntas</h2>
-                    <button id="btnCloseQManager" class="btn secondary"><i class="fa-solid fa-xmark"></i></button>
+                    <h2 style="color:var(--primary);"><i class="fa-solid fa-database"></i> Gerir Banco de Perguntas (JS)</h2>
+                    <button id="btnCloseQManager" class="btn secondary"><i class="fa-solid fa-xmark"></i> Fechar</button>
                 </div>
                 
-                <div style="background:#f8fafc; padding:15px; border-radius:10px; text-align:left; margin-bottom:20px;">
-                    <h4>Adicionar/Editar Pergunta</h4>
+                <div style="background:#f8fafc; padding:15px; border-radius:10px; margin-bottom:20px; border: 1px solid #cbd5e1;">
+                    <h4 style="margin-bottom: 10px;">Adicionar ou Editar Pergunta</h4>
                     <input type="hidden" id="editQId">
-                    <input type="text" id="editQText" placeholder="Texto da Pergunta" style="width:100%; padding:10px; margin:5px 0; border:1px solid #cbd5e1; border-radius:6px;">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0;">
-                        <input type="text" id="editOpt0" placeholder="Opção A" style="padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
-                        <input type="text" id="editOpt1" placeholder="Opção B" style="padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
-                        <input type="text" id="editOpt2" placeholder="Opção C" style="padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
-                        <input type="text" id="editOpt3" placeholder="Opção D" style="padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                    <label style="font-size:0.85rem; font-weight:600;">Texto da Pergunta:</label>
+                    <input type="text" id="editQText" placeholder="Ex: O que é JavaScript?" style="width:100%; padding:10px; margin:5px 0 10px 0;">
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div><label style="font-size:0.8rem;">Opção A:</label><input type="text" id="editOpt0" style="width:100%; padding:8px;"></div>
+                        <div><label style="font-size:0.8rem;">Opção B:</label><input type="text" id="editOpt1" style="width:100%; padding:8px;"></div>
+                        <div><label style="font-size:0.8rem;">Opção C:</label><input type="text" id="editOpt2" style="width:100%; padding:8px;"></div>
+                        <div><label style="font-size:0.8rem;">Opção D:</label><input type="text" id="editOpt3" style="width:100%; padding:8px;"></div>
                     </div>
-                    <select id="editQCorrect" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #cbd5e1; border-radius:6px;">
-                        <option value="0">Opção A é a correta</option>
-                        <option value="1">Opção B é a correta</option>
-                        <option value="2">Opção C é a correta</option>
-                        <option value="3">Opção D é a correta</option>
+                    
+                    <label style="font-size:0.85rem; font-weight:600;">Qual é a opção correta?</label>
+                    <select id="editQCorrect" style="width:100%; padding:10px; margin:5px 0 15px 0;">
+                        <option value="0">Opção A</option>
+                        <option value="1">Opção B</option>
+                        <option value="2">Opção C</option>
+                        <option value="3">Opção D</option>
                     </select>
-                    <button id="btnSaveQuestion" class="btn success full-width" style="margin-bottom: 10px;">Guardar Pergunta</button>
-                    <button id="btnSaveCustomBank" class="btn primary full-width"><i class="fa-solid fa-floppy-disk"></i> Guardar Este Tema Para Uso Futuro</button>
+                    
+                    <div style="display:flex; gap:10px;">
+                        <button id="btnSaveQuestion" class="btn success" style="flex:1;">Guardar Pergunta</button>
+                        <button id="btnSaveCustomTheme" class="btn primary" style="flex:1;"><i class="fa-solid fa-floppy-disk"></i> Salvar Tema Atual</button>
+                    </div>
                 </div>
 
-                <div class="table-responsive" style="max-height: 300px; overflow-y:auto;">
+                <div class="table-responsive" style="max-height: 250px; overflow-y:auto; border: 1px solid #e2e8f0; border-radius: 8px;">
                     <table class="data-table" id="questionsTable">
                         <thead><tr><th>ID</th><th>Pergunta</th><th>Ações</th></tr></thead>
                         <tbody></tbody>
@@ -90,27 +89,24 @@
             <div class="modal-card info-card">
                 <div class="alert-icon pulse" style="color:var(--accent)"><i class="fa-solid fa-hourglass-half"></i></div>
                 <h2>SALA DE ESPERA</h2>
-                <p>O seu ecrã está fixo. Aguarde que o professor inicie o seu teste.</p>
-                <p class="waiting-text"><i class="fa-solid fa-circle-notch fa-spin"></i> A aguardar autorização do professor...</p>
+                <p>Ecrã bloqueado. A aguardar que o professor dê início ao teste.</p>
             </div>
         </div>
 
         <div id="studentLockModal" class="modal-backdrop hidden">
             <div class="modal-card alert-card">
                 <div class="alert-icon pulse"><i class="fa-solid fa-ban"></i></div>
-                <h2>TESTE BLOQUEADO</h2>
-                <p>Atenção à segurança da avaliação.</p>
-                <p class="highlight-warn" id="lockReasonText">Motivo: -</p>
-                <p class="waiting-text"><i class="fa-solid fa-rotate fa-spin"></i> O tempo parou. A aguardar professor.</p>
+                <h2 id="lockTitleText">TESTE BLOQUEADO</h2>
+                <p class="highlight-warn" id="lockReasonText">Motivo: Infração</p>
+                <p>O tempo parou. Aguarde o professor.</p>
             </div>
         </div>
 
         <div id="studentKickedModal" class="modal-backdrop hidden">
             <div class="modal-card alert-card">
                 <div class="alert-icon"><i class="fa-solid fa-door-closed"></i></div>
-                <h2>FOI EXPULSO</h2>
-                <p>O professor expulsou-o da sala de avaliação.</p>
-                <p class="highlight-warn">O seu acesso foi revogado.</p>
+                <h2>EXPULSO</h2>
+                <p class="highlight-warn">O professor removeu-o da avaliação.</p>
             </div>
         </div>
 
@@ -119,36 +115,37 @@
             <div class="card registration-card" id="studentRegCard">
                 <div class="card-header-vibrant">
                     <h2>Entrar na Avaliação</h2>
-                    <p id="connStatus" style="color:var(--warning); font-weight:bold; font-size:0.8rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> A ligar...</p>
+                    <p id="connStatus" style="color:var(--warning);"><i class="fa-solid fa-circle-notch fa-spin"></i> A ligar...</p>
                 </div>
                 <div class="form-group">
-                    <label><i class="fa-solid fa-key"></i> Código da Sala:</label>
+                    <label>Código da Sala:</label>
                     <input type="text" id="studentRoomCode" placeholder="Ex: 1234">
                 </div>
                 <div class="form-group">
-                    <label><i class="fa-solid fa-user"></i> Nome Completo:</label>
-                    <input type="text" id="studentName" placeholder="Ex: João Miguel Silva">
+                    <label>Nome Completo:</label>
+                    <input type="text" id="studentName" placeholder="O seu nome">
                 </div>
-                <button id="btnStartTest" class="btn primary full-width" disabled><i class="fa-solid fa-rocket"></i> Entrar na Sala (F11)</button>
+                <button id="btnStartTest" class="btn primary full-width" disabled>Entrar na Sala (F11)</button>
             </div>
 
+            <!-- O QUIZ É TOTALMENTE INJETADO AQUI VIA JS -->
             <div class="card quiz-card hidden" id="studentQuizCard">
                 <div class="quiz-header">
-                    <div class="student-info-badge"><i class="fa-solid fa-user-check"></i> <span id="displayStudentName">Nome</span></div>
-                    <div class="timer-box"><i class="fa-solid fa-stopwatch"></i> <span id="timeLeft">00:00</span></div>
+                    <div class="student-info-badge"><span id="displayStudentName">Nome</span></div>
+                    <div class="timer-box"><span id="timeLeft">00:00</span></div>
                 </div>
                 <div class="progress-container"><div class="progress-bar" id="quizProgressBar"></div></div>
-                <div class="question-navigation-header">
-                    <h3 class="q-counter">Pergunta <span id="currentQNum">1</span> de <span id="totalQNum">30</span></h3>
-                </div>
-                <div id="singleQuestionContainer" class="single-question-container"></div>
+                <div class="question-navigation-header"><h3 class="q-counter">Pergunta <span id="currentQNum">1</span> de <span id="totalQNum">30</span></h3></div>
+                
+                <div id="dynamicQuizContainer"></div> <!-- INJEÇÃO JS -->
+
                 <div class="quiz-footer-actions">
-                    <button id="btnPrevQ" class="btn secondary" disabled><i class="fa-solid fa-arrow-left"></i> Anterior</button>
-                    <button id="btnNextQ" class="btn primary">Próxima <i class="fa-solid fa-arrow-right"></i></button>
-                    <button id="btnSubmitTest" class="btn success hidden"><i class="fa-solid fa-check-double"></i> Finalizar Teste</button>
+                    <button id="btnPrevQ" class="btn secondary" disabled>Anterior</button>
+                    <button id="btnNextQ" class="btn primary">Próxima</button>
+                    <button id="btnSubmitTest" class="btn success hidden">Finalizar Teste</button>
                 </div>
             </div>
-
+            
             <div class="card result-card hidden" id="studentResultCard">
                 <div class="success-icon"><i class="fa-solid fa-trophy"></i></div>
                 <h2 id="resultTitle">Teste Terminado!</h2>
@@ -164,40 +161,31 @@
         <main id="teacherView" class="view-section hidden">
             <div class="dashboard-grid">
                 <div class="card settings-panel">
-                    <h2><i class="fa-solid fa-gears"></i> Painel de Controlo</h2>
-                    <div class="info-box" style="margin-bottom: 20px;">
-                        <h3 style="margin-bottom:5px; color:var(--primary);"><i class="fa-solid fa-door-open"></i> Sala: <strong id="displayRoomCode">---</strong></h3>
+                    <h2>Painel de Controlo</h2>
+                    <div class="info-box" style="margin-bottom:20px;">
+                        <h3>Sala: <strong id="displayRoomCode">---</strong></h3>
                     </div>
-                    <button id="btnManageQuestions" class="btn secondary full-width" style="margin-bottom:15px;"><i class="fa-solid fa-database"></i> Modificar Perguntas da Sala</button>
+                    <button id="btnManageQuestions" class="btn secondary full-width" style="margin-bottom:15px;"><i class="fa-solid fa-database"></i> Gerir Perguntas (JS)</button>
                     <div class="form-group">
-                        <label>Duração Total (minutos):</label>
+                        <label>Duração (minutos):</label>
                         <input type="number" id="settingDuration" value="30" min="1">
                     </div>
-                    <button id="btnSaveSettings" class="btn primary full-width">Guardar Duração</button>
                 </div>
-
                 <div class="card monitor-panel">
-                    <div class="card-header-flex" style="flex-wrap: wrap; gap: 10px;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <h2><i class="fa-solid fa-satellite-dish"></i> Radar de Alunos</h2>
-                            <span class="live-badge pulse-bg">Ligado</span>
-                        </div>
-                        <button id="btnStartAllWaiting" class="btn success"><i class="fa-solid fa-rocket"></i> Autorizar Todos</button>
+                    <div class="card-header-flex" style="gap:10px;">
+                        <h2>Radar de Alunos</h2>
+                        <button id="btnStartAllWaiting" class="btn success"><i class="fa-solid fa-rocket"></i> Iniciar Todos</button>
                     </div>
-                    
                     <div class="table-responsive">
                         <table class="data-table" id="liveStudentsTable">
-                            <thead>
-                                <tr><th>Aluno</th><th>Estado/Progresso</th><th>Última Infração</th><th>Ações</th></tr>
-                            </thead>
+                            <thead><tr><th>Aluno</th><th>Estado</th><th>Progresso</th><th>Ações Individuais</th></tr></thead>
                             <tbody><tr class="empty-row"><td colspan="4">A aguardar alunos...</td></tr></tbody>
                         </table>
                     </div>
-
-                    <h3 style="margin-top: 2rem;"><i class="fa-solid fa-file-signature"></i> Pautas de Submissões</h3>
+                    <h3 style="margin-top: 2rem;">Pautas e Submissões</h3>
                     <div class="table-responsive">
                         <table class="data-table" id="submissionsTable">
-                            <thead><tr><th>Nome</th><th>Nota (0-20)</th><th>Infrações Totais</th><th>Ver Relatório</th></tr></thead>
+                            <thead><tr><th>Nome</th><th>Nota (0-20)</th><th>Infrações</th><th>Relatório</th></tr></thead>
                             <tbody><tr class="empty-row"><td colspan="4">Sem submissões.</td></tr></tbody>
                         </table>
                     </div>
